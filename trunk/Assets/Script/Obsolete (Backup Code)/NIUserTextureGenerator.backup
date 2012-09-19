@@ -1,0 +1,715 @@
+﻿
+using System.Runtime.InteropServices;
+using OpenNI;
+using UnityEngine;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading;
+
+public class NIUserTextureGenerator : MonoBehaviour 
+{
+    public Color32 backColor = new Color32(255, 0, 0, 0);
+    public Color32 playerColor = new Color32(255, 0, 0, 255);    
+    public float alphaCutValue = 0.75f;
+    //public float blurSize = 0.001f;
+    public int blurFactor = 10;
+    public bool filterEnabled = true;
+    public bool medianFilterEnabled = true;
+    public bool textureBlendingEnabled = true;
+    public bool rejectAlpha = false;
+    public bool energyEffectEnabled = false;
+    public bool bilinearEnabled = true;
+	
+	NIPlayerManager playerManager;
+	OpenNISettingsManager context;
+	SceneMetaData userMetaData;
+    //EdgeDetector edgeDetection;
+    //MorphologicalOperator mOperator;
+    //SaveByteArray svByte;       // saving texture, debug purpose only
+    //int imgCounter = 0;
+
+    Texture2D userTexture;          // Texture to be displayed
+    short[] rawUserMap;             // Raw user map, taken from OpenNI
+	Color32[] userMap;              // texture buffer
+    short[] userMask;               // user mask data
+    short[] tempMap;
+
+    int xResOri;        // original x size
+	int yResOri;        // original y size
+    int xResScaled;
+    int yResScaled;
+    int samplingFactor = 1;
+    int resPOT;         // power of two size
+    int xMargin;        // x-margin of actual-size and power-of-two-size
+    int yMargin;        // y-margin of actual-size and power-of-two-size
+
+    const short BACKGROUND = -1;    // this type will be ignored
+    const short EDGE = -2;          // will be calculated later
+    const short CANDIDATE = -3;     // candidate of control point but can be rejected
+    const short CONTROL_POINT = -4; // control point of curve
+
+    Material gaussianMat;    
+    Material userMapMat;    
+    Material texBlendingMat;    
+    Material median5x5Mat;    
+    Material noEffectMat;
+    Material transCutMat;
+    Material simpleMedianMat;
+    Material bilinearMat;
+    //Material invGaussianMat;
+    //Material sharpeningMat;
+    //Material meanMat;
+    //Material erosionMat;
+    //Material dilationMat;
+    Material shockFilterMat;
+    //Material lightDotsMat;
+    Material alphaCutMat;
+
+    RenderTexture renderTex;
+    RenderTexture renderTex02;
+    RenderTexture oldTex;
+    RenderTexture bufferTex;
+
+    float timeCounter = 0.0f;
+
+    // Fruit Effect
+    public RenderTexture m_HumanTex;
+    public RenderTexture m_HumanEffTex;
+    public RenderTexture m_DestTex;
+    public Material m_BlitHumanMat;
+    public Material m_BlitGaussianMat;
+    public Material m_BlitHumanEffMat;
+    public Material m_BlitDestMat;
+
+    // Fruit Effect
+    //public int m_BlurLevel = 10;
+    //public int m_DrawHumanInterval = 2;
+    //private int m_drawHumanCount = 2;
+
+	private Material CreateMaterial()
+	{
+		Shader defaultShader = Shader.Find("Unlit/Texture");
+		Material mat = new Material(defaultShader);
+		return mat;
+	}
+
+    /// <summary>
+    /// This function is only called once after being initialized
+    /// </summary>
+	void Start() 
+    {
+        if(!NIUtils.CheckOpenNIAvailable())
+        {
+			gameObject.renderer.enabled = false;
+            return;
+		}
+		
+        context = FindObjectOfType(typeof(OpenNISettingsManager)) as OpenNISettingsManager;
+        if (context == null) { throw new System.Exception("Missing OpenNISettingsManager"); }
+
+        playerManager = FindObjectOfType(typeof(NIPlayerManager)) as NIPlayerManager;
+        if (playerManager == null) { throw new System.Exception("Missing NIPlayerManager"); }
+
+        //DebugConsole.IsOpen = true;             // GUI Debugger
+        //svByte = new SaveByteArray();           // save to image, debug purpose only
+        //edgeDetection = new EdgeDetector();
+        //mOperator = new MorphologicalOperator();
+        
+        userMetaData = context.UserGenerator.UserNode.GetUserPixels(0);
+        xResOri = userMetaData.XRes;
+        yResOri = userMetaData.YRes;
+        xResScaled = xResOri / samplingFactor;
+        yResScaled = yResOri / samplingFactor;
+
+        resPOT = Mathf.Max(GetPowerOfTwo(xResOri), GetPowerOfTwo(xResOri));
+
+        xMargin = (resPOT - xResScaled) / 2;
+        yMargin = (resPOT - yResScaled) / 2;
+
+		rawUserMap = new short[xResOri * yResOri];
+        userTexture = new Texture2D(resPOT, resPOT, TextureFormat.ARGB32, false);
+        userMap = new Color32[resPOT * resPOT];
+        userMask = new short[xResScaled * yResScaled];
+        tempMap = new short[xResScaled * yResScaled];
+
+        /*erosionMat = new Material(Shader.Find("Custom/MorphologicalErosion"));
+        erosionMat.SetColor("_backgroundColor", backColor);
+        erosionMat.SetColor("_foregroundColor", playerColor);
+        erosionMat.SetFloat("_dimension", resPOT);*/
+
+        /*dilationMat = new Material(Shader.Find("Custom/MorphologicalDilation"));
+        dilationMat.SetColor("_backgroundColor", backColor);
+        dilationMat.SetColor("_foregroundColor", playerColor);
+        dilationMat.SetFloat("_dimension", resPOT);*/
+
+        /*sharpeningMat = new Material(Shader.Find("Custom/Sharpening"));
+        sharpeningMat.SetFloat("_dimension", resPOT);*/
+
+        /*meanMat = new Material(Shader.Find("Custom/Mean"));
+        meanMat.SetFloat("_dimension", resPOT);*/
+
+        /*simpleMedianMat = new Material(Shader.Find("Custom/SimpleMedianFilter"));
+        simpleMedianMat.SetColor("_backgroundColor", backColor);
+        simpleMedianMat.SetColor("_foregroundColor", playerColor);
+        simpleMedianMat.SetFloat("_dimension", resPOT);
+        //simpleMedianMat.SetFloat("_windowSize", 3);*/
+
+        shockFilterMat = new Material(Shader.Find("Custom/ShockFilter"));
+        shockFilterMat.SetFloat("_shockMagnitude", 0.05f);   // 0.05
+        shockFilterMat.SetFloat("_xDestSize", 0.1f);
+        shockFilterMat.SetFloat("_yDestSize", 0.1f);
+        shockFilterMat.SetFloat("_dimension", resPOT);
+
+        bilinearMat = new Material(Shader.Find("Custom/Bilinear"));
+
+        median5x5Mat = new Material(Shader.Find("Custom/MedianFilter5x5"));
+        median5x5Mat.SetColor("_backgroundColor", backColor);
+        median5x5Mat.SetColor("_foregroundColor", playerColor);
+
+        //lightDotsMat = new Material(Shader.Find("Custom/LightDots"));
+        //lightDotsMat.SetColor("_backgroundColor", backColor);
+
+        alphaCutMat = new Material(Shader.Find("Custom/AlphaCut"));
+        //alphaCutMat.SetFloat("_Cutoff", 0.75f);
+
+        texBlendingMat = new Material(Shader.Find("Custom/TextureBlending"));
+        texBlendingMat.SetFloat("_MixValue", 0.5f);
+
+        //transCutMat = new Material(Shader.Find("Custom/TransparentCutout"));
+        //texBlendingMat.SetFloat("_Cutoff", 0.5f);
+
+        gaussianMat = new Material(Shader.Find("Custom/GaussianBlur"));
+
+        noEffectMat = new Material(Shader.Find("Custom/NoEffect"));
+        
+        /*invGaussianMat = new Material(Shader.Find("Custom/InverseGaussianBlur"));
+        invGaussianMat.SetFloat("blurSizeX", 0.0005f);
+        invGaussianMat.SetFloat("blurSizeY", 0.0005f);*/
+
+        renderTex = new RenderTexture(resPOT, resPOT, 0, RenderTextureFormat.ARGB32);
+        renderTex.useMipMap = false;
+        renderTex.wrapMode = TextureWrapMode.Clamp;
+        //renderTex.filterMode = FilterMode.Trilinear;
+        //mixTextureMat.SetTexture("_Texture0", renderTex);
+
+        bufferTex = new RenderTexture(resPOT, resPOT, 0, RenderTextureFormat.ARGB32);
+        bufferTex.useMipMap = false;
+        bufferTex.wrapMode = TextureWrapMode.Clamp;
+
+        oldTex = new RenderTexture(resPOT, resPOT, 0, RenderTextureFormat.ARGB32);
+        oldTex.useMipMap = false;
+        oldTex.wrapMode = TextureWrapMode.Clamp;
+        texBlendingMat.SetTexture("_OldTexture", oldTex);
+
+		Renderer renderer = gameObject.renderer;
+		
+        if(renderer)
+        {
+			if(renderer.material == null) { renderer.material = CreateMaterial(); }
+			//renderer.material.SetTexture("_MainTex", userTexture);
+
+            userMapMat = renderer.material;
+            renderTex02 = userMapMat.GetTexture("_MainTex") as RenderTexture;
+            //renderTex02.filterMode = FilterMode.Trilinear;
+		} 
+        else  { return; }
+	}
+
+    void ShaderPasses(Texture2D tex)
+    {
+        if (filterEnabled)
+        {
+            if (medianFilterEnabled) Graphics.Blit(tex, renderTex, median5x5Mat);
+            else Graphics.Blit(tex, renderTex, noEffectMat);
+
+            //gaussianMat.SetFloat("blurSizeX", blurSize);
+            //gaussianMat.SetFloat("blurSizeY", blurSize);
+
+            for (int a = 0; a < blurFactor; a++)
+            {
+                Graphics.Blit(renderTex, renderTex, gaussianMat, 0);
+                Graphics.Blit(renderTex, renderTex, gaussianMat, 1);
+            }
+
+            if (textureBlendingEnabled)
+            {
+                Graphics.Blit(bufferTex, oldTex, texBlendingMat);
+                Graphics.Blit(renderTex, renderTex, texBlendingMat);
+                Graphics.Blit(renderTex, bufferTex);
+            }
+
+            /*
+            if (rejectAlpha)
+            {
+                alphaCutMat.SetFloat("_Cutoff", alphaCutValue);
+                Graphics.Blit(renderTex, renderTex, alphaCutMat);
+            }
+            */
+        }
+        else
+        {
+            Graphics.Blit(tex, renderTex, noEffectMat);
+        }
+
+        if (energyEffectEnabled)
+        {
+            m_BlitDestMat.SetTexture("_PrevTex", m_HumanTex);
+
+            Graphics.Blit(renderTex, renderTex, gaussianMat, 0);
+            Graphics.Blit(renderTex, renderTex, gaussianMat, 1);
+            Graphics.Blit(renderTex, m_HumanTex);
+            
+            Graphics.Blit(m_HumanEffTex, m_HumanEffTex, m_BlitHumanEffMat, 0);
+            Graphics.Blit(m_HumanTex, m_HumanEffTex, m_BlitHumanEffMat, 1);
+            m_BlitDestMat.SetTexture("_SubTex", m_HumanEffTex);
+            Graphics.Blit(m_HumanTex, m_DestTex, m_BlitDestMat);
+            Graphics.Blit(m_DestTex, renderTex02, userMapMat);
+        }
+        else
+        {
+            //if (renderTex02 != null) renderTex02.filterMode = FilterMode.Trilinear;
+            if(bilinearEnabled)Graphics.Blit(renderTex, renderTex, bilinearMat);
+            //Graphics.Blit(renderTex, renderTex, median5x5Mat);
+            Graphics.Blit(renderTex, renderTex02, userMapMat);
+        }
+    }
+
+	void CopyTextures()
+	{
+        for (int a = 0; a < userMap.Length; a++) userMap[a] = backColor;
+
+        for (int x = 0; x < xResScaled; x++)
+        {
+            for (int y = 0; y < yResScaled; y++)
+            {
+                int idx = x + (yResScaled - y - 1) * xResScaled;
+                int rawIdx = x * samplingFactor + (y * samplingFactor * xResOri);
+                short d = rawUserMap[rawIdx];       // user mask
+
+                if (d > 0) { userMask[idx] = (short)MaskConstant.PLAYER; }
+                else { userMask[idx] = (short)MaskConstant.BACKGROUND; }
+            }
+        }
+
+        //edgeDetection.EdgeDetect(userMask, xResScaled, yResScaled, (short)MaskConstant.PLAYER);  
+        //edgeDetection.ErosionEdgeDetect(userMask, xResScaled, yResScaled);
+        
+        //edgeDetection.Dilation(userMask, xResScaled, yResScaled);
+        //edgeDetection.Dilation(userMask, xResScaled, yResScaled);
+
+        //mOperator.Closing(userMask, xResScaled, yResScaled);
+        //mOperator.Erode(userMask, xResScaled, yResScaled);
+
+		//MarchPixels(userMask, userMap);
+
+        int oriIdx = 0;
+        int fIdx = 0;
+        for (int y = 0; y < resPOT; y++)
+        {
+            for (int x = 0; x < resPOT; x++)
+            {
+                if (x >= xMargin &&
+                   x < resPOT - xMargin &&
+                   y >= yMargin &&
+                   y < resPOT - yMargin)
+                {
+
+                    short flag = userMask[oriIdx];
+                    //if (flag == (short)MaskConstant.CONTROL_POINT)
+                    //{
+                    //    userMap[fIdx] = Color.green;
+                    //}
+                    if (flag == (short)MaskConstant.BACKGROUND)
+                    {
+                        userMap[fIdx] = backColor;
+                    }
+                    //else if (flag == (short)MaskConstant.PLAYER1)
+                    //{
+                    //    userMap[fIdx] = player1Color;
+                    //}
+                    else if (flag == (short)MaskConstant.EDGE || flag == (short)MaskConstant.PLAYER)
+                    {
+                        userMap[fIdx] = playerColor;
+                    }
+
+                    //userMap[fIdx] = tempUserMap[rawIdx];
+                    oriIdx++;
+                }
+
+                fIdx++;
+            }
+        }
+    }
+
+	// Update is called once per frame
+	void Update () 
+    {
+        //DebugConsole.Log(Time.deltaTime);
+        
+
+        Marshal.Copy(userMetaData.LabelMapPtr, rawUserMap, 0, rawUserMap.Length);
+        CopyTextures();
+        userTexture.SetPixels32(userMap);
+        userTexture.Apply();
+
+        ShaderPasses(userTexture);
+        //MultiPassGaussianBlur(userTexture);                
+        /*byte[] texData = userTexture.EncodeToPNG();
+        svByte.ByteArrayToFile(@"D:/tex_debug/img_" + imgCounter + ".png", texData);
+        imgCounter++;*/
+	}
+
+    int GetPowerOfTwo(int num)
+    {
+        int pot = 1;
+        while (pot < num) pot <<= 1;
+        return pot;
+    }
+        
+    //void DrawSilhouette(Color32[] userMap, List<Point2D> boundaryPoints)
+    //{
+    //    if (boundaryPoints == null || boundaryPoints.Count == 0) return;
+
+    //    float upSamplingFactor = (float)resPOT / (float)xResScaled;
+    //    int xRes = (int)((float)xResScaled * upSamplingFactor);
+    //    int yRes = (int)((float)yResScaled * upSamplingFactor);
+    //    int xTexMargin = (resPOT - xRes) / 2;
+    //    int yTexMargin = (resPOT - yRes) / 2;
+
+    //    int pointSamplingFactor = 4;
+    //    if (boundaryPoints.Count < pointSamplingFactor) pointSamplingFactor = 1;
+
+    //    List<Point2D> points = new List<Point2D>();
+    //    for (int a = 0; a < boundaryPoints.Count; a += pointSamplingFactor)
+    //    {
+    //        points.Add(boundaryPoints[a]);
+    //    }
+    //    /*
+    //    Point2D firstPoint = boundaryPoints[0];
+    //    Point2D lastPoint = boundaryPoints[boundaryPoints.Count - 1];
+
+    //    if (boundaryPoints.Count % pointSamplingFactor != 0)
+    //    {
+    //        points.Add(lastPoint);
+    //    }
+
+    //    if (firstPoint.x != 0 && firstPoint.x != xResScaled - 1 &&
+    //       firstPoint.y != 0 && firstPoint.y != yResScaled - 1 &&
+    //       lastPoint.x != 0 && lastPoint.x != xResScaled - 1 &&
+    //       lastPoint.y != 0 && lastPoint.y != yResScaled - 1)
+    //        points.Add(firstPoint);  // back to starting point
+    //    */
+
+    //    int pSize = points.Count;
+    //    List<Point2D> curvePoints = new List<Point2D>();
+
+    //    for (int a = 0; a < pSize - 3; a++)
+    //    {
+    //        Point2D one = points[a];
+    //        Point2D two = points[(a + 1) % pSize];
+    //        Point2D three = points[(a + 2) % pSize];
+    //        Point2D four = points[(a + 3) % pSize];
+
+    //        for(float t = 0.0f; t < 1.0f; t += 0.5f)
+    //        {
+    //            float it = 1.0f - t;
+    //            float t2 = t * t;
+    //            float t3 = t2 * t;
+
+    //            float b0 = it * it * it / 6.0f;
+    //            float b1 = (3 * t3 - 6 * t2 + 4) / 6.0f;
+    //            float b2 = (-3 * t3 + 3 * t2 + 3 * t + 1) / 6.0f;
+    //            float b3 = t3 / 6.0f;
+
+    //            float x = (b0 * one.x) + (b1 * two.x) + (b2 * three.x) + (b3 * four.x);
+    //            float y = (b0 * one.y) + (b1 * two.y) + (b2 * three.y) + (b3 * four.y);
+
+    //            curvePoints.Add(new Point2D((int)x, (int)y));
+    //        }
+    //    }
+
+    //    for (int a = 0; a < curvePoints.Count - 1; a++)
+    //    {
+    //        Point2D p0 = curvePoints[a];
+    //        Point2D p1 = curvePoints[a + 1];
+
+    //        p0.x = (int)((float)p0.x * upSamplingFactor);
+    //        p0.y = (int)((float)p0.y * upSamplingFactor);
+    //        p1.x = (int)((float)p1.x * upSamplingFactor);
+    //        p1.y = (int)((float)p1.y * upSamplingFactor);
+
+    //        DrawLine(xTexMargin, yTexMargin, p0, p1, userMap);
+    //    }
+
+    //    /*for (int a = 0; a < points.Count - 1; a++)
+    //    {
+    //        Point2D p0 = points[a];
+    //        Point2D p1 = points[a + 1];
+
+    //        p0.x = (int)((float)p0.x * upSamplingFactor);
+    //        p0.y = (int)((float)p0.y * upSamplingFactor);
+    //        p1.x = (int)((float)p1.x * upSamplingFactor);
+    //        p1.y = (int)((float)p1.y * upSamplingFactor);
+
+    //        DrawLine(xTexMargin, yTexMargin, p0, p1, userMap);
+    //    }*/
+    //}
+
+    /// <summary>
+    /// Bresenham Line Algorithm
+    /// </summary>
+    //void DrawLine(int xTexMargin, int yTexMargin, Point2D p0, Point2D p1, Color32[] userMap)
+    //{
+    //    if (p0.isEqual(p1))
+    //    {
+    //        userMap[p0.x + xTexMargin + (p0.y + yTexMargin) * resPOT] = playerColor;
+    //        return;
+    //    }
+
+    //    int dx = Mathf.Abs(p1.x - p0.x);
+    //    int dy = Mathf.Abs(p1.y - p0.y);
+    //    int sx = (p0.x < p1.x) ? 1 : -1;
+    //    int sy = (p0.y < p1.y) ? 1 : -1;
+    //    int err = dx - dy;
+
+    //    while (!p0.isEqual(p1))
+    //    {
+    //        userMap[p0.x + xTexMargin + (p0.y + yTexMargin) * resPOT] = playerColor;
+
+    //        int e2 = 2 * err;
+    //        if (e2 > -dy)
+    //        {
+    //            err -= dy;
+    //            p0.x += sx;
+    //        }
+    //        if (e2 < dx)
+    //        {
+    //            err += dx;
+    //            p0.y += sy;
+    //        }
+    //    }
+    //}
+
+
+    //void MarchPixels(short[] userMask, Color32[] userMap)
+    //{
+    //    int squareSize = Mathf.Max(xResScaled, yResScaled);
+
+    //    for (int a = 0; a < squareSize; a++)
+    //    {
+    //        for (int b = a; b < squareSize; b++)
+    //        {
+    //            if (a < xResScaled && b < yResScaled)
+    //            {
+    //                int x = a;
+    //                int y = b;
+
+    //                if (userMask[x + (y * xResScaled)] == (short)MaskConstant.EDGE)
+    //                {
+    //                    List<Point2D> boundaryPoints = MarchBoundary(userMask, new Point2D(x, y));
+    //                    DrawSilhouette(userMap, boundaryPoints);
+    //                }
+    //            }
+
+    //            if (a < yResScaled && b < xResScaled)   // flip
+    //            {
+    //                int x = b;
+    //                int y = a;
+
+    //                if (userMask[x + (y * xResScaled)] == (short)MaskConstant.EDGE)
+    //                {
+    //                    List<Point2D> boundaryPoints = MarchBoundary(userMask, new Point2D(x, y));
+    //                    DrawSilhouette(userMap, boundaryPoints);
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+
+    //List<Point2D> MarchBoundary(short[] userMask, Point2D startPoint)
+    //{
+    //    if (startPoint.isNegative()) { return null; }       // invalid
+    //    List<Point2D> candidateList = new List<Point2D>();  // for dfs searching purpose
+    //    candidateList.Add(startPoint);
+
+    //    for (int a = 0; a < userMask.Length; a++)
+    //    {
+    //        if (userMask[a] == (short)MaskConstant.CONTROL_POINT) tempMap[a] = CONTROL_POINT;
+    //        else if (userMask[a] == (short)MaskConstant.EDGE) tempMap[a] = EDGE;
+    //        else tempMap[a] = BACKGROUND;
+    //    }
+
+    //    short boundaryLength = 0;   // length of boundary
+    //    tempMap[startPoint.x + startPoint.y * xResScaled] = 0;
+    //    Point2D farthestPoint = new Point2D(-1, -1);
+
+    //    while (candidateList.Count > 0)
+    //    {
+    //        //loopNum++;
+    //        Point2D curPoint = candidateList[candidateList.Count - 1]; // latest;
+    //        short curVal = tempMap[curPoint.x + curPoint.y * xResScaled];
+    //        //DebugConsole.Log(curVal);
+    //        if (curVal > boundaryLength)
+    //        {
+    //            boundaryLength = curVal;
+    //            farthestPoint = curPoint;
+    //        }
+
+    //        // upleft
+    //        else if (curPoint.x - 1 >= 0 && curPoint.y - 1 >= 0 && tempMap[curPoint.x - 1 + (curPoint.y - 1) * xResScaled] == EDGE)
+    //        {
+    //            curVal++;
+    //            tempMap[curPoint.x - 1 + (curPoint.y - 1) * xResScaled] = curVal;
+    //            candidateList.Add(new Point2D(curPoint.x - 1, curPoint.y - 1));
+    //        }
+
+    //        // upright
+    //        else if (curPoint.x + 1 < xResScaled && curPoint.y - 1 >= 0 && tempMap[curPoint.x + 1 + (curPoint.y - 1) * xResScaled] == EDGE)
+    //        {
+    //            curVal++;
+    //            tempMap[curPoint.x + 1 + (curPoint.y - 1) * xResScaled] = curVal;
+    //            candidateList.Add(new Point2D(curPoint.x + 1, curPoint.y - 1));
+    //        }
+
+    //        // downright
+    //        else if (curPoint.x + 1 < xResScaled && curPoint.y + 1 < yResScaled && tempMap[curPoint.x + 1 + (curPoint.y + 1) * xResScaled] == EDGE)
+    //        {
+    //            curVal++;
+    //            tempMap[curPoint.x + 1 + (curPoint.y + 1) * xResScaled] = curVal;
+    //            candidateList.Add(new Point2D(curPoint.x + 1, curPoint.y + 1));
+    //        }
+
+    //        // downleft
+    //        else if (curPoint.x - 1 >= 0 && curPoint.y + 1 < yResScaled && tempMap[curPoint.x - 1 + (curPoint.y + 1) * xResScaled] == EDGE)
+    //        {
+    //            curVal++;
+    //            tempMap[curPoint.x - 1 + (curPoint.y + 1) * xResScaled] = curVal;
+    //            candidateList.Add(new Point2D(curPoint.x - 1, curPoint.y + 1));
+    //        }
+
+    //        // left
+    //        else if (curPoint.x - 1 >= 0 && tempMap[curPoint.x - 1 + (curPoint.y * xResScaled)] == EDGE)
+    //        {
+    //            curVal++;
+    //            tempMap[curPoint.x - 1 + (curPoint.y * xResScaled)] = curVal;
+    //            candidateList.Add(new Point2D(curPoint.x - 1, curPoint.y));
+    //        }
+
+    //        // up
+    //        else if (curPoint.y - 1 >= 0 && tempMap[curPoint.x + (curPoint.y - 1) * xResScaled] == EDGE)
+    //        {
+    //            curVal++;
+    //            tempMap[curPoint.x + (curPoint.y - 1) * xResScaled] = curVal;
+    //            candidateList.Add(new Point2D(curPoint.x, curPoint.y - 1));
+    //        }
+
+    //        // right
+    //        else if (curPoint.x + 1 < xResScaled && tempMap[curPoint.x + 1 + (curPoint.y) * xResScaled] == EDGE)
+    //        {
+    //            curVal++;
+    //            tempMap[curPoint.x + 1 + (curPoint.y) * xResScaled] = curVal;
+    //            candidateList.Add(new Point2D(curPoint.x + 1, curPoint.y));
+    //        }
+
+    //        // down
+    //        else if (curPoint.y + 1 < yResScaled && tempMap[curPoint.x + (curPoint.y + 1) * xResScaled] == EDGE)
+    //        {
+    //            curVal++;
+    //            tempMap[curPoint.x + (curPoint.y + 1) * xResScaled] = curVal;
+    //            candidateList.Add(new Point2D(curPoint.x, curPoint.y + 1));
+    //        }
+    //        else
+    //        {
+    //            candidateList.RemoveAt(candidateList.Count - 1);
+    //        }
+    //    }
+
+  
+    //    if (farthestPoint.isNegative()) return null;
+
+    //    if (boundaryLength < 20)
+    //    {
+    //        for (int a = 0; a < userMask.Length; a++)
+    //        {
+    //            if (tempMap[a] >= 0) userMask[a] = (short)MaskConstant.BACKGROUND;
+    //        }
+
+    //        return null;
+    //    }
+
+    //    Point2D cPoint = farthestPoint;
+    //    short markValue = tempMap[cPoint.x + cPoint.y * xResScaled];
+    //    List<Point2D> boundaryPoints = new List<Point2D>(); // return value, list of boundary points
+    //    boundaryPoints.Add(cPoint);
+    //    for (int nextValue = markValue - 1; nextValue >= 0; nextValue--)
+    //    {                        
+            
+    //        // upleft
+    //        if (cPoint.x - 1 >= 0 && cPoint.y - 1 >= 0 && tempMap[cPoint.x - 1 + (cPoint.y - 1) * xResScaled] == nextValue)
+    //        {
+    //            AddBoundaryPoint(tempMap, boundaryPoints, ref cPoint, -1, -1);
+    //        }
+
+    //        // upright
+    //        else if (cPoint.x + 1 < xResScaled && cPoint.y - 1 >= 0 && tempMap[cPoint.x + 1 + (cPoint.y - 1) * xResScaled] == nextValue)
+    //        {
+    //            AddBoundaryPoint(tempMap, boundaryPoints, ref cPoint, 1, -1);
+    //        }
+
+    //        // downright
+    //        else if (cPoint.x + 1 < xResScaled && cPoint.y + 1 < yResScaled && tempMap[cPoint.x + 1 + (cPoint.y + 1) * xResScaled] == nextValue)
+    //        {
+    //            AddBoundaryPoint(tempMap, boundaryPoints, ref cPoint, 1, 1);
+    //        }
+
+    //        // downleft
+    //        else if (cPoint.x - 1 >= 0 && cPoint.y + 1 < yResScaled && tempMap[cPoint.x - 1 + (cPoint.y + 1) * xResScaled] == nextValue)
+    //        {
+    //            AddBoundaryPoint(tempMap, boundaryPoints, ref cPoint, -1, 1);
+    //        }
+
+    //        // left
+    //        else if (cPoint.x - 1 >= 0 && tempMap[cPoint.x - 1 + cPoint.y * xResScaled] == nextValue)
+    //        {
+    //            AddBoundaryPoint(tempMap, boundaryPoints, ref cPoint, -1, 0);
+    //        }
+
+    //        // up
+    //        else if (cPoint.y - 1 >= 0 && tempMap[cPoint.x + (cPoint.y - 1) * xResScaled] == nextValue)
+    //        {
+    //            AddBoundaryPoint(tempMap, boundaryPoints, ref cPoint, 0, -1);
+    //        }
+
+    //        // right
+    //        else if (cPoint.x + 1 < xResScaled && tempMap[cPoint.x + 1 + cPoint.y * xResScaled] == nextValue)
+    //        {
+    //            AddBoundaryPoint(tempMap, boundaryPoints, ref cPoint, 1, 0);
+    //        }
+
+    //        // down
+    //        else if (cPoint.y + 1 < yResScaled && tempMap[cPoint.x + (cPoint.y + 1) * xResScaled] == nextValue)
+    //        {
+    //            AddBoundaryPoint(tempMap, boundaryPoints, ref cPoint, 0, 1);
+    //        }
+            
+    //    }
+
+    //    for (int a = 0; a < userMask.Length; a++)
+    //    {
+    //        if (tempMap[a] == CANDIDATE) userMask[a] = (short)MaskConstant.CONTROL_POINT;
+    //        //else if (tempMap[a] >= 0) userMask[a] = (short)MaskConstant.BACKGROUND;
+    //    }
+
+    //    return boundaryPoints;
+    //}
+
+    //void AddBoundaryPoint(short[] tempMap, List<Point2D> boundaryPoints, ref Point2D cPoint, int xFactor, int yFactor)
+    //{
+    //    Point2D newPoint = new Point2D(cPoint.x + xFactor, cPoint.y + yFactor);
+    //    tempMap[newPoint.x + newPoint.y * xResScaled] = CANDIDATE;
+    //    boundaryPoints.Add(newPoint);
+    //    cPoint = newPoint;
+    //}
+
+}

@@ -1,0 +1,15 @@
+<!-- OPENNI X86 -->
+
+<OpenNI>
+	<Log writeToConsole="false" writeToFile="false">
+		<!-- 0 - Verbose, 1 - Info, 2 - Warning, 3 - Error (default) -->
+		<LogLevel value="3"/>
+		<Masks>
+			<Mask name="ALL" on="true"/>
+		</Masks>
+	</Log>
+	<ProductionNodes>
+		<Recording file="D:\Projects\Unity\UnityKinect\test_sample\003.oni">
+		</Recording>
+	</ProductionNodes>
+</OpenNI>

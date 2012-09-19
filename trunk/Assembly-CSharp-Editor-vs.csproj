@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+	<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+	<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+	<ProductVersion>9.0.21022</ProductVersion>
+	<SchemaVersion>2.0</SchemaVersion>
+	<ProjectGuid>{19618A46-DAE5-290E-532D-F8594A14EAC9}</ProjectGuid>
+	<OutputType>Library</OutputType>
+	<AppDesignerFolder>Properties</AppDesignerFolder>
+	<RootNamespace></RootNamespace>
+	<AssemblyName>Assembly-CSharp-Editor</AssemblyName>
+	<TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+	<FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+	<DebugSymbols>true</DebugSymbols>
+	<DebugType>full</DebugType>
+	<Optimize>false</Optimize>
+	<OutputPath>Temp\bin\Debug\</OutputPath>
+	<DefineConstants>DEBUG;TRACE;UNITY_3_5_0;UNITY_3_5;UNITY_EDITOR;ENABLE_PROFILER;UNITY_STANDALONE_WIN;ENABLE_GENERICS;ENABLE_DUCK_TYPING;ENABLE_TERRAIN;ENABLE_MOVIES;ENABLE_WEBCAM;ENABLE_MICROPHONE;ENABLE_NETWORK;ENABLE_CLOTH;ENABLE_WWW;ENABLE_SUBSTANCE</DefineConstants>
+	<ErrorReport>prompt</ErrorReport>
+	<WarningLevel>4</WarningLevel>
+	<NoWarn>0169</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+	<DebugType>pdbonly</DebugType>
+	<Optimize>true</Optimize>
+	<OutputPath>Temp\bin\Release\</OutputPath>
+	<DefineConstants>TRACE</DefineConstants>
+	<ErrorReport>prompt</ErrorReport>
+	<WarningLevel>4</WarningLevel>
+	<NoWarn>0169</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+	<Reference Include="System" />
+    <Reference Include="System.XML" />
+	<Reference Include="System.Core" />
+	<Reference Include="UnityEngine">
+	  <HintPath>D:/Program Files (x86)/Unity/Editor/Data/Managed/UnityEngine.dll</HintPath>
+	</Reference>
+	<Reference Include="UnityEditor">
+	  <HintPath>D:/Program Files (x86)/Unity/Editor/Data/Managed/UnityEditor.dll</HintPath>
+	</Reference>
+  </ItemGroup>
+  <ItemGroup>
+     <Compile Include="Assets\OpenNI\Editor\NIEventLoggerInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NIInputInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NIOpenNISettingsManagerInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NIPlayerManagerCOMSelectionInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NIPlayerManagerInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NIPlayerManagerPoseSelectionInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NIQueryInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NISkeletonControllerInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NISkeletonTrackerInspector.cs" />
+     <Compile Include="Assets\OpenNI\Editor\NIUserPoseDetectorInspector.cs" />
+     <None Include="Assets\Shader\ColorIntensity.shader" />
+     <None Include="Assets\Shader\BilinearAlpha.shader" />
+     <None Include="Assets\Shader\GaussianUtilities.cginc" />
+     <None Include="Assets\Shader\CompositeImageDepth.shader" />
+     <None Include="Assets\Shader\EnhanceDepth.shader" />
+     <None Include="Assets\Shader\FruitEffectShader\FruitHuman.shader" />
+     <None Include="Assets\Shader\MorphologicalErosion.shader" />
+     <None Include="Assets\Shader\MedianBinaryFilter5x5.shader" />
+     <None Include="Assets\Shader\FruitEffectShader\FruitDest.shader" />
+     <None Include="Assets\Shader\AlphaCut.shader" />
+     <None Include="Assets\Shader\MeanFilter5x5.shader" />
+     <None Include="Assets\Shader\Bilinear.shader" />
+     <None Include="Assets\Shader\SobelEdge.shader" />
+     <None Include="Assets\Shader\EdgeSSAO.shader" />
+     <None Include="Assets\Shader\NormalEstimation.shader" />
+     <None Include="Assets\Shader\NoEffectFinal.shader" />
+     <None Include="Assets\Shader\Smoothstep.shader" />
+     <None Include="Assets\Shader\QuickShift.shader" />
+     <None Include="Assets\Shader\Sharpening.shader" />
+     <None Include="Assets\Shader\ResetAlpha.shader" />
+     <None Include="Assets\Shader\TransparentCutout.shader" />
+     <None Include="Assets\Shader\GaussianBlur02.shader" />
+     <None Include="Assets\Shader\OpticalFlowHornSchunck.shader" />
+     <None Include="Assets\Shader\SpecularNormal.shader" />
+     <None Include="Assets\Shader\MixTexture.shader" />
+     <None Include="Assets\Shader\MedianFilter5x5.shader" />
+     <None Include="Assets\Shader\AccumulationBuffer.shader" />
+     <None Include="Assets\Shader\MeanFilter3x3.shader" />
+     <None Include="Assets\Shader\GaussianBlur.shader" />
+     <None Include="Assets\Shader\RGBColor.shader" />
+     <None Include="Assets\Shader\BilateralTextureBlending.shader" />
+     <None Include="Assets\Shader\LightDots.shader" />
+     <None Include="Assets\Shader\BilateralAlpha5x5.shader" />
+     <None Include="Assets\Shader\ShockFilter.shader" />
+     <None Include="Assets\Shader\NoEffect.shader" />
+     <None Include="Assets\Shader\SSAO.shader" />
+     <None Include="Assets\Shader\FruitEffectShader\FruitEffect.shader" />
+     <None Include="Assets\Shader\MorphologicalDilation.shader" />
+     <None Include="Assets\Shader\AntiAliasing.shader" />
+ <Reference Include="Assembly-UnityScript">
+ <HintPath>Library\ScriptAssemblies\Assembly-UnityScript.dll</HintPath>
+ </Reference>
+ <Reference Include="OpenNI.Net">
+ <HintPath>Assets\OpenNI\Interface library\OpenNI engine\OpenNI.Net.dll</HintPath>
+ </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Assembly-CSharp-vs.csproj">
+      <Project>{B4D88EEF-4CA4-C9C5-1DF6-E39E8B1AC65F}</Project>      <Name>Assembly-CSharp-vs</Name>    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+	   Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  
+</Project>

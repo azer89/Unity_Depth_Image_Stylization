@@ -1,0 +1,11 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+enum MaskConstant
+{
+    BACKGROUND = 0,     
+    PLAYER1 = 1,
+    EDGE = 2,               // after we apply edge detection
+    CONTROL_POINT = 3,      // spline control point candidate
+}
