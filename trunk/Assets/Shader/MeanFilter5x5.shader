@@ -106,25 +106,7 @@ Shader "Custom/MeanFilter5x5"
 				}
 				
 				sum /= 25.0;
-			
-				/*			
-				float4 sum = float4(0.0);
 				
-                for(int x = 0; x < 3; x++)
-                {
-                    for(int y = 0; y < 3; y++)
-                    {
-					
-						float xMargin = i.uv.x + (x - 1) / _dimension;
-						float yMargin = i.uv.y + (y - 1) / _dimension;
-						 
-                        float4 color = tex2D(_MainTex, float2(xMargin, yMargin));
-						sum += color;
-                    }
-                }
-                
-				sum = sum / 9;
-				*/
 				return sum;
 				
 			}

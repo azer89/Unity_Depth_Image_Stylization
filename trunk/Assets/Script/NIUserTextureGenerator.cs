@@ -25,7 +25,7 @@ public class NIUserTextureGenerator : MonoBehaviour
     public Material normalEstimationMat;            // normal estimation
     public Material specularNormalMat;              // specular shading my manipulating surface normal
     public Material accumulationBufferMat;          // temporal coherence
-    public Material mean3x3Mat;                     // smoothing 
+    public Material meanMat;                     // smoothing 
     public Material rgbEffectMat;
     public Material enhanceDepthMat;
     public Material intensityMat;

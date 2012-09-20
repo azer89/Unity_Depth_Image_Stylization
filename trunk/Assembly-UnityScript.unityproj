@@ -71,6 +71,7 @@
      <None Include="Assets\Shader\SpecularNormal.shader" />
      <None Include="Assets\Shader\MixTexture.shader" />
      <None Include="Assets\Shader\MedianFilter5x5.shader" />
+     <None Include="Assets\Shader\BilateralAlpha7x7.shader" />
      <None Include="Assets\Shader\AccumulationBuffer.shader" />
      <None Include="Assets\Shader\MeanFilter3x3.shader" />
      <None Include="Assets\Shader\GaussianBlur.shader" />
