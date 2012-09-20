@@ -40,17 +40,22 @@ Shader "Custom/BilinearAlpha"
 			}
 			
 			float4 frag (v2f i) : COLOR
-			{			
-				float textureSize = 512.0; 				//size of the texture
-				float texelSize = 2.0 / textureSize; 	//size of one texel 
+			{							
+				float xTextureSize = 1024.0;
+				float yTextureSize = 512.0;
+				
+				//float texelSize = 1.0 / textureSize; 	//size of one texel 
+				float xTexelSize = 1.0 / xTextureSize;
+				float yTexelSize = 1.0 / yTextureSize; 
 			
-				float resVal = 0.0;
+				float4 resVal = float4(0.0);
 				// in vertex shaders you should use texture2DLod instead of texture2D
-				float tl = tex2D(_MainTex, i.uv).w;
-				float tr = tex2D(_MainTex, i.uv + float2(texelSize, 0.0)).w;
-				float bl = tex2D(_MainTex, i.uv + float2(0.0, texelSize)).w;
-				float br = tex2D(_MainTex, i.uv + float2(texelSize , texelSize)).w;
-				float2 f = frac( i.uv * textureSize ); 	// get the decimal part
+				float4 tl = tex2D(_MainTex, i.uv);
+				float4 tr = tex2D(_MainTex, i.uv + float2(xTexelSize, 0.0));
+				float4 bl = tex2D(_MainTex, i.uv + float2(0.0, yTexelSize));
+				float4 br = tex2D(_MainTex, i.uv + float2(xTexelSize , yTexelSize));
+				//float2 f = frac( i.uv.xy * textureSize ); 	// get the decimal part
+				float2 f = frac(float2(i.uv.x * xTexelSize, i.uv.y * yTexelSize));
 				float4 tA = lerp( tl, tr, f.x ); 			// will interpolate the red dot in the image
 				float4 tB = lerp( bl, br, f.x ); 			// will interpolate the blue dot in the image
 				resVal = lerp( tA, tB, f.y ); 				// will interpolate the green dot in the image

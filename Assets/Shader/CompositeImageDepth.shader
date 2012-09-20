@@ -14,7 +14,6 @@ Shader "Custom/CompositeImage"
 
 	SubShader 
 	{
-	
 		// ---------- PASS #0 DOT NORMAL EFFECT ----------
 		Pass 
 		{		

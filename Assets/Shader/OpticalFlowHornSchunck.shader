@@ -44,10 +44,10 @@ Shader "Custom/OpticalFlowHornSchunck"
 			float4 frag (v2f i) : COLOR
 			{				
 				
-				float texOffset = _offset / 512.0;
+				//float texOffset = _offset / 512.0;
 				
-				float2 nx = float2(texOffset, 0.0);
-				float2 ny = float2(0.0, texOffset);
+				float2 nx = float2(_offset / 1024.0, 0.0);
+				float2 ny = float2(0.0, _offset / 512.0);
 				float2 uvCoordinate = float2(i.uv.x, i.uv.y);
 				
 				float4 a = tex2D(_MainTex, uvCoordinate);

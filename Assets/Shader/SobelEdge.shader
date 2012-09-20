@@ -40,18 +40,19 @@ Shader "Custom/SobelEdge"
 			}
 			
 			float4 frag (v2f i) : COLOR 
-			{			
-				float step = _SearchRange / 512.0;
+			{	
+				float xStep = _SearchRange / 1024.0;
+				float yStep = _SearchRange / 512.0;
 				
-				float d_t = tex2D(_MainTex, float2(i.uv.x, i.uv.y -  step)).w;
-				float d_r = tex2D(_MainTex, float2(i.uv.x + step, i.uv.y)).w;
-				float d_b = tex2D(_MainTex, float2(i.uv.x, i.uv.y +  step)).w;
-				float d_l = tex2D(_MainTex, float2(i.uv.x -  step, i.uv.y)).w;
+				float d_t = tex2D(_MainTex, float2(i.uv.x, i.uv.y -  yStep)).w;
+				float d_r = tex2D(_MainTex, float2(i.uv.x + xStep, i.uv.y)).w;
+				float d_b = tex2D(_MainTex, float2(i.uv.x, i.uv.y +  yStep)).w;
+				float d_l = tex2D(_MainTex, float2(i.uv.x -  xStep, i.uv.y)).w;
 				
-				float d_tl = tex2D(_MainTex, float2(i.uv.x - step, i.uv.y - step)).w;
-				float d_tr = tex2D(_MainTex, float2(i.uv.x + step, i.uv.y - step)).w;
-				float d_bl = tex2D(_MainTex, float2(i.uv.x - step, i.uv.y + step)).w;
-				float d_br = tex2D(_MainTex, float2(i.uv.x + step, i.uv.y + step)).w;
+				float d_tl = tex2D(_MainTex, float2(i.uv.x - xStep, i.uv.y - yStep)).w;
+				float d_tr = tex2D(_MainTex, float2(i.uv.x + xStep, i.uv.y - yStep)).w;
+				float d_bl = tex2D(_MainTex, float2(i.uv.x - xStep, i.uv.y + yStep)).w;
+				float d_br = tex2D(_MainTex, float2(i.uv.x + xStep, i.uv.y + yStep)).w;
 				
 				/*
 					-1  0  1
