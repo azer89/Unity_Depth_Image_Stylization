@@ -3,8 +3,7 @@ Shader "Custom/EnhanceDepthShader"
 {
 	Properties 
 	{
-		_MainTex ("Texture", 2D) = "white" { }	
-		
+		_MainTex ("Texture", 2D) = "white" { }			
 		brightness ("Brightness", Range(-1.0, 1.0)) = 0.0
 		contrast ("Contrast", Range(0.0, 1.0)) = 0.0
 	}

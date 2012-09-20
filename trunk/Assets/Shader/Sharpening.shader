@@ -6,7 +6,7 @@ Shader "Custom/Sharpening"
 	Properties 
 	{
 		_MainTex ("Texture", 2D) = "white" { }
-		_dimension ("Dimension", Float) = 512
+		//_dimension ("Dimension", Float) = 512
 	}
 
 	SubShader 
@@ -20,7 +20,7 @@ Shader "Custom/Sharpening"
 			#include "UnityCG.cginc"
 
 			sampler2D _MainTex;
-			float _dimension;
+			//float _dimension;
 			float4 _MainTex_ST;
 			
 			struct v2f 
@@ -51,8 +51,8 @@ Shader "Custom/Sharpening"
                     {
 						float k = kernel[x][y];
 						
-						float xMargin = min(max(0.0, i.uv.x + (x - 1) / _dimension), 1.0);
-						float yMargin = min(max(0.0, i.uv.y + (y - 1) / _dimension), 1.0);
+						float xMargin = min(max(0.0, i.uv.x + (x - 1) / 1024.0), 1.0);
+						float yMargin = min(max(0.0, i.uv.y + (y - 1) / 512.0), 1.0);
 						 
                         float4 color = tex2D(_MainTex, float2(xMargin, yMargin));
 						sum += color * k;

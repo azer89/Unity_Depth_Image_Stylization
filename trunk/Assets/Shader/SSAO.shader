@@ -67,9 +67,9 @@ Shader "Custom/SSAO"
 			
 			float2 getRandom(float2 uv)
 			{	 
-				/*	512.0 is texture size
+				/*	1024.0 x 512.0 is texture size
 					64.0 is random texture size */
-				return normalize(tex2D(rand_buffer, 512.0 * uv / 64.0).xy);
+				return normalize(tex2D(rand_buffer, float2(uv.x * 1024.0, uv.y * 512.0) / 64.0).xy);
 			}
 						
 			float doAmbientOcclusion(float2 uv, float2 coord, float p, float3 n)
@@ -93,9 +93,9 @@ Shader "Custom/SSAO"
 				float2 rand = getRandom(i.uv);
 				float rad = g_sample_rad / p;
 				
-				// 0.001953125 = 1.0 / 512.0;
-				float2 vec[4] = {float2(0.001953125, 0.0),
-								 float2(-0.001953125, 0.0),
+				// precomputed value for texture size 1024x512
+				float2 vec[4] = {float2(0.0009765625, 0.0),
+								 float2(-0.0009765625, 0.0),
 								 float2(0.0, 0.001953125),
 								 float2(0.0, -0.001953125)};
 				

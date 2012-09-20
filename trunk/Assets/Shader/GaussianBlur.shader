@@ -37,7 +37,7 @@ Shader "Custom/GaussianBlur"
 			
 			half4 frag (v2f i) : COLOR
 			{
-				return Gaussian1D9x9(_MainTex, i.uv, float2(1, 0), float2(512, 512));
+				return Gaussian1D9x9(_MainTex, i.uv, float2(1, 0), float2(1024.0, 512.0));
 			}
 			ENDCG
 		}
@@ -71,7 +71,7 @@ Shader "Custom/GaussianBlur"
 			
 			half4 frag (v2f i) : COLOR
 			{
-				return Gaussian1D9x9(_MainTex, i.uv, float2(0, 1), float2(512, 512));
+				return Gaussian1D9x9(_MainTex, i.uv, float2(0, 1), float2(1024.0, 512.0));
 			}
 			ENDCG
 		}

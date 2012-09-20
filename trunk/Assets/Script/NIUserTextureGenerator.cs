@@ -9,7 +9,6 @@ using System.Threading;
 
 public class NIUserTextureGenerator : MonoBehaviour 
 {
-    //public bool showRGBData = false;
     public bool blurEnabled = true;                 // necessary for alpha cut, false means alpha cut disabled
     public int blurFactor = 2;                      // number of gaussian iteration
     public float alphaCutThreshold = 0.5f;          // alpha cut on the user mask edge
@@ -54,10 +53,10 @@ public class NIUserTextureGenerator : MonoBehaviour
     public Material humanDestMat;
     // Energy Effect --------------------
 
-    public Color32 backColor = new Color32(255, 0, 0, 0);
-    public Color32 player01Color = new Color32(69, 127, 255, 255);
-    public Color32 player02Color = new Color32(116, 255, 116, 255);
-    public Color32 player03Color = new Color32(255, 181, 67, 255);
+    public Color32 backColor =      new Color32(255, 0, 0, 0);
+    public Color32 player01Color =  new Color32(69, 127, 255, 255);
+    public Color32 player02Color =  new Color32(116, 255, 116, 255);
+    public Color32 player03Color =  new Color32(255, 181, 67, 255);
 
 	NIPlayerManager playerManager;
 	OpenNISettingsManager context;
@@ -77,8 +76,10 @@ public class NIUserTextureGenerator : MonoBehaviour
     int xResOri;            // original x size
 	int yResOri;            // original y size
     int xResScaled;         // original divided by samplingFactor
-    int yResScaled;         // original divided by samplingFactor    
-    int resPOT;             // Power Of Two (POT) size, x and y have the same size
+    int yResScaled;         // original divided by samplingFactor 
+    int xResPOT;
+    int yResPOT;
+
     int xMargin;            // x-margin of POT texture
     int yMargin;            // y-margin of POT size
     int samplingFactor = 1; // scale down the texture
@@ -93,6 +94,8 @@ public class NIUserTextureGenerator : MonoBehaviour
     // This function is only called once after being initialized
 	void Start() 
     {
+        DebugConsole.IsOpen = true;
+
         if(!NIUtils.CheckOpenNIAvailable())
         {
 			gameObject.renderer.enabled = false;
@@ -112,8 +115,25 @@ public class NIUserTextureGenerator : MonoBehaviour
         xResScaled = xResOri / samplingFactor;
         yResScaled = yResOri / samplingFactor;
 
-        resPOT = Mathf.Max(GetPowerOfTwo(xResOri), GetPowerOfTwo(xResOri));
+        xResPOT = GetPowerOfTwo(xResOri);
+        yResPOT = GetPowerOfTwo(yResOri);
 
+        DebugConsole.Log(xResOri + " - " + yResOri);
+
+        xMargin = (xResPOT - xResScaled) / 2;
+        yMargin = (yResPOT - yResScaled) / 2;
+
+        rawUserMap = new short[xResOri * yResOri];
+        rawRGBMap = new byte[xResOri * yResOri * 3];
+        userTexture = new Texture2D(xResPOT, yResPOT, TextureFormat.ARGB32, false);
+        rgbImage = new Texture2D(xResPOT, yResPOT, TextureFormat.RGB24, false);
+        rgbPixels = new Color32[xResPOT * yResPOT];
+        userMap = new Color32[xResPOT * yResPOT];
+        for (int a = 0; a < userMap.Length; a++) userMap[a] = backColor;
+        rawDepthMap = new short[xResOri * yResOri];
+        histogramMap = new float[context.CurrentContext.Depth.DeviceMaxDepth];
+
+        /*
         xMargin = (resPOT - xResScaled) / 2;
         yMargin = (resPOT - yResScaled) / 2;
 
@@ -126,7 +146,8 @@ public class NIUserTextureGenerator : MonoBehaviour
         for (int a = 0; a < userMap.Length; a++) userMap[a] = backColor;
         rawDepthMap = new short[xResOri * yResOri];
         histogramMap = new float[context.CurrentContext.Depth.DeviceMaxDepth];
-                
+        */
+
         gaussianMat = new Material(Shader.Find("Custom/GaussianBlur"));
         PrepareRenderTextures();
 		Renderer renderer = gameObject.renderer;		
@@ -143,14 +164,14 @@ public class NIUserTextureGenerator : MonoBehaviour
     void PrepareRenderTextures()
     {
         // most of these textures are only buffer so no filtering
-        depthBufferTex = InitiateRenderTexture(resPOT, resPOT, FilterMode.Point);
-        normalBufferTex = InitiateRenderTexture(resPOT, resPOT, FilterMode.Point);
-        ssaoTex = InitiateRenderTexture(resPOT, resPOT, FilterMode.Point);
-        accBufferTex = InitiateRenderTexture(resPOT, resPOT, FilterMode.Point);
-        specularNormalTex = InitiateRenderTexture(resPOT, resPOT, FilterMode.Point);
-        rgbBufferTex = InitiateRenderTexture(resPOT, resPOT, FilterMode.Point);
-        intensityBuffer = InitiateRenderTexture(resPOT, resPOT, FilterMode.Point);
-        renderTex01 = InitiateRenderTexture(resPOT, resPOT, FilterMode.Bilinear);   // use bilinear filter
+        depthBufferTex =    InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
+        normalBufferTex =   InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
+        ssaoTex =           InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
+        accBufferTex =      InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
+        specularNormalTex = InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
+        rgbBufferTex =      InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
+        intensityBuffer =   InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
+        renderTex01 =       InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Bilinear);   // use bilinear filter
     }
 
     RenderTexture InitiateRenderTexture(int xSize, int ySize, FilterMode filterMode)
@@ -308,7 +329,7 @@ public class NIUserTextureGenerator : MonoBehaviour
         {
             for (int y = 0; y < yResScaled; y++)
             {
-                int idx = (x + xMargin) + (resPOT - (y + yMargin) - 1) * resPOT;
+                int idx = (x + xMargin) + (yResPOT - (y + yMargin) - 1) * xResPOT;
                 int rawIdx = x * samplingFactor + (y * samplingFactor * xResOri);
                 short d = rawUserMap[rawIdx];       // user mask
                 short pixel = rawDepthMap[rawIdx];  // depth pixel
