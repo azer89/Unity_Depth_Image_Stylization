@@ -82,6 +82,7 @@
      <None Include="Assets\Shader\ShockFilter.shader" />
      <None Include="Assets\Shader\NoEffect.shader" />
      <None Include="Assets\Shader\SSAO.shader" />
+     <None Include="Assets\Shader\ColorIntensity7x7.shader" />
      <None Include="Assets\Shader\FruitEffectShader\FruitEffect.shader" />
      <None Include="Assets\Shader\MorphologicalDilation.shader" />
      <None Include="Assets\Shader\AntiAliasing.shader" />

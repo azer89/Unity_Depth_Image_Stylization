@@ -12,7 +12,7 @@ public class NIUserTextureGenerator : MonoBehaviour
     public bool blurEnabled = true;                 // necessary for alpha cut, false means alpha cut disabled
     public int blurFactor = 2;                      // number of gaussian iteration
     public float alphaCutThreshold = 0.5f;          // alpha cut on the user mask edge
-    public bool energyEffectEnabled = false;        // energy effect along the edge  
+    //public bool energyEffectEnabled = false;      // energy effect along the edge  
     public bool bilateralFilterEnabled = true;      // apply bilateral filter on depth map
     public int bilateralIteration = 1;              // number of bilateral iteration
     public bool acculumationBufferEnabled = false;	// temporal coherence
@@ -45,12 +45,12 @@ public class NIUserTextureGenerator : MonoBehaviour
     RenderTexture intensityBuffer;
 
     // Energy Effect --------------------
-    public RenderTexture humanTex;
-    public RenderTexture humanEffectTex;
-    public RenderTexture humanDestTex;
-    public Material humanGaussianMat;
-    public Material humanEffectMat;
-    public Material humanDestMat;
+    //public RenderTexture humanTex;
+    //public RenderTexture humanEffectTex;
+    //public RenderTexture humanDestTex;
+    //public Material humanGaussianMat;
+    //public Material humanEffectMat;
+    //public Material humanDestMat;
     // Energy Effect --------------------
 
     public Color32 backColor =      new Color32(255, 0, 0, 0);
@@ -187,7 +187,7 @@ public class NIUserTextureGenerator : MonoBehaviour
     {  
         Graphics.Blit(tex, renderTex01);
 
-        if (energyEffectEnabled)	// glowing effect on player's surrounding
+        /*if (energyEffectEnabled)	// glowing effect on player's surrounding
         {     
             Graphics.Blit(renderTex01, humanTex);
 
@@ -216,6 +216,7 @@ public class NIUserTextureGenerator : MonoBehaviour
         }
         else	// only show user'shape
         {
+        */
             if (blurEnabled)
             {
                 for (int a = 0; a < blurFactor; a++)
@@ -230,7 +231,7 @@ public class NIUserTextureGenerator : MonoBehaviour
             
             userMapMat.SetFloat("_Cutoff", alphaCutThreshold);            
             Graphics.Blit(renderTex01, renderTex02, userMapMat);
-        }
+        //}
     }
 
     // temporal coherence calculation
