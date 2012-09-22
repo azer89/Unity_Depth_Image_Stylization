@@ -4,7 +4,7 @@ Shader "Custom/QuickShift"
 	Properties 
 	{
 		_MainTex ("Texture", 2D) = "white" { }	// RGB Image	
-		_IntensityTex ("Texture", 2D) = "white" { }	// Intensity Image
+		_DensityTex ("Density Texture", 2D) = "white" { }	// Intensity Image
 	}
 
 	SubShader 
@@ -19,7 +19,7 @@ Shader "Custom/QuickShift"
 			#include "UnityCG.cginc"
 			
 			sampler2D _MainTex;
-			sampler2D _IntensityTex;
+			sampler2D _DensityTex;
 			
 			struct v2f 
 			{
@@ -38,85 +38,29 @@ Shader "Custom/QuickShift"
 			}
 			
 			float4 frag (v2f i) : COLOR
-			{				
-				float xd[25] = {
-					-0.001953125,
-					-0.001953125,
-					-0.001953125,
-					-0.001953125,
-					-0.001953125,
-					-0.000976563,
-					-0.000976563,
-					-0.000976563,
-					-0.000976563,
-					-0.000976563,
-					0.0,
-					0.0,
-					0.0,
-					0.0,
-					0.0,
-					0.000976563,
-					0.000976563,
-					0.000976563,
-					0.000976563,
-					0.000976563,
-					0.001953125,
-					0.001953125,
-					0.001953125,
-					0.001953125,
-					0.001953125
-				};
-				
-				float yd[25] = {
-					-0.00390625,
-					-0.001953125,
-					0.0,
-					0.001953125,
-					0.00390625,
-					-0.00390625,
-					-0.001953125,
-					0.0,
-					0.001953125,
-					0.00390625,
-					-0.00390625,
-					-0.001953125,
-					0.0,
-					0.001953125,
-					0.00390625,
-					-0.00390625,
-					-0.001953125,
-					0.0,
-					0.001953125,
-					0.00390625,
-					-0.00390625,
-					-0.001953125,
-					0.0,
-					0.001953125,
-					0.00390625
-				};
-				
-				float4 inten1 = tex2D(_IntensityTex, float2(i.uv.x, i.uv.y));	
-				float4 inten2 = float4(0.0);
-				float4 col1 = tex2D(_MainTex, float2(i.uv.x, i.uv.y));
+			{	
+				float densityDist1 = length(tex2D(_DensityTex, i.uv));
+				float densityDist2 = 0.0;
+				float4 col1 = tex2D(_MainTex, i.uv);
 				float4 col2 = float4(0.0);
 				float dist = 1000.0;
-				float intenDist1 = length(inten1);
-				
-				for(int iter = 0; iter < 25; iter++)
+				float d =1000.0;
+								
+				for(int xIter = 0; xIter < 5; xIter++)
 				{
-					float2 uvCoord = float2(xd[iter], yd[iter]);
-					
-					inten2 = tex2D(_IntensityTex, i.uv + uvCoord);
-					float intenDist2 = length(inten2);
-					col2 = tex2D(_MainTex, i.uv + uvCoord);
-					
-					float d = distance(float2(0.0), uvCoord);
-					
-					if(intenDist2 > intenDist1 && d < dist)
-					{
-						intenDist1 = intenDist2;
-						dist = d;
-						//col1 = col2;
+					for(int yIter = 0; yIter < 5; yIter++)
+					{						
+						float2 uvCoord = i.uv + float2((xIter - 2) / 1024.0, (yIter - 2) / 512.0);						
+						col2 = tex2D(_MainTex, uvCoord);
+						densityDist2 = length(tex2D(_DensityTex, uvCoord));						
+						d = distance(col1, col2);
+						
+						if(densityDist2 > densityDist1 && d < dist)
+						{
+							densityDist1 = densityDist2;
+							dist = d;
+							col1 = col2;
+						}
 					}
 				}
 				

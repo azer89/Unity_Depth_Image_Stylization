@@ -1,5 +1,5 @@
 
-Shader "Custom/ColorIntensity7x7" 
+Shader "Custom/ColorDensity7x7" 
 {
 	Properties 
 	{
@@ -38,30 +38,27 @@ Shader "Custom/ColorIntensity7x7"
 			}
 			
 			float4 frag (v2f i) : COLOR
-			{					
-				float _sigma2 = _sigma * _sigma;  
-				float _sigma2_2 = _sigma2 * -2.0;				
+			{	 
+				float _sigma2_2 = _sigma * _sigma * 2.0;				
 				
-				float4 inten1 = float4(0.0);
-				float4 inten2 = float4(0.0);
+				float4 accumDensity = float4(0.0); 
+				float4 density1 = tex2D(_MainTex, i.uv);
+				float4 density2 = float4(0.0);
 				
 				for(int xIter = 0; xIter < 7; xIter++)
 				{
 					for(int yIter = 0; yIter < 7; yIter++)
 					{
-						int xIdx = (xIter - 3) / 1024.0;
-						int yIdx = (yIter - 3) / 512.0;
-						
-						inten2 = tex2D(_MainTex, float2(i.uv.x + xIdx, i.uv.y + yIdx));
-						float4 inten = 	exp(distance(inten1, inten2) / _sigma2_2);				
-						
-						inten1 += inten;
+						float2 uvCoord = float2((xIter - 3) / 1024.0, (yIter - 3) / 512.0);						    
+						density2 = tex2D(_MainTex, i.uv + uvCoord);								
+						float4 diff = density1 - density2;						
+						float4 inten = 	exp(-1 * diff * diff / _sigma2_2);								
+						accumDensity += inten;
 					}
 				}
 				
-				inten1 /= (_sigma2_2 * 3.14159265359 * 49.0);
-				
-				return inten1;
+				accumDensity /= (_sigma2_2 * 3.14159265359 * 49.0);				
+				return accumDensity;
 			}
 			
 			ENDCG

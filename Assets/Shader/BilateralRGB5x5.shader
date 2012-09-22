@@ -5,7 +5,7 @@
 // this shader is only works on alpha channel
 // although it can be easily modified to work with float3 or float4
 
-Shader "Custom/BilateralAlpha7x7Filter" 
+Shader "Custom/BilateralRGB5x5Filter" 
 {
 	Properties 
 	{
@@ -48,41 +48,41 @@ Shader "Custom/BilateralAlpha7x7Filter"
 			{	
 				float d_sigma2 = domain_sigma * domain_sigma;  
 				float d_sigma2_2 = d_sigma2 * 2.0;
-				float d_sigma2_2_pi = d_sigma2_2 * 3.14159265359;
+				float d_sigma2_2_pi = d_sigma2_2 * 3.1415926;
 				float r_sigma2 = range_sigma * range_sigma;
 				
-				float c1 = tex2D(_MainTex, i.uv).w;
+				float3 c1 = tex2D(_MainTex, i.uv).xyz;
 				
-				float colorSum  = 0.0;
-				float sum = 0.0;
-				float val = 0.0;
-			 
-				float inten = 0.0;
-				float c2 = 0.0;
+				float3 colorSum  = float3(0.0);
+				float3 sum = float3(0.0);
+				float3 val = float3(0.0);
+				
+				float3 inten = float3(0.0);
+				float3 c2 = float3(0.0);
 				float dist = 0.0;
-				float colorDif = 0;
-												
-				for(int xIter = 0; xIter < 7; xIter++)
-				{ 
-					for(int yIter = 0; yIter < 7; yIter++)
+				float3 colorDif = float3(0.0);
+				
+				for(int xIter = 0; xIter < 5; xIter++)
+				{
+					for(int yIter = 0; yIter < 5; yIter++)
 					{
-						float2 uvCoord = float2((xIter - 3) / 1024.0, (yIter - 3) / 512.0);
-						c2 = tex2D(_MainTex, i.uv + uvCoord).w;
+						float2 uvCoord = float2((xIter - 2) / 1024.0, (yIter - 2) / 512.0);
+						c2 = tex2D(_MainTex, i.uv + uvCoord).xyz;
 						dist = length(float2(xIter, yIter));
-						colorDif = abs(c1 - c2);
+						colorDif = c1 - c2;
 						
 						inten = exp(-1.0 * dist / d_sigma2_2) /
 							d_sigma2_2_pi * 
-							exp( (-1.0 * colorDif/ (r_sigma2)));
-
+							exp( (-1.0 * colorDif * colorDif/ r_sigma2));
+						
 						sum += inten ;
-						colorSum += inten * c2;
+						colorSum += inten * c2;						
 					}
 				}
 				
 				val = colorSum / sum;
 				
-				return float4(0.0, 0.0, 0.0, val);
+				return float4(val, 1.0);
 			}
 			
 			ENDCG
