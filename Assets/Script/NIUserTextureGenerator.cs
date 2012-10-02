@@ -12,15 +12,16 @@ public class NIUserTextureGenerator : MonoBehaviour
     public bool blurEnabled = true;                 // necessary for alpha cut, false means alpha cut disabled
     public int blurFactor = 2;                      // number of gaussian iteration
     public float alphaCutThreshold = 0.5f;          // alpha cut on the user mask edge
-    //public bool energyEffectEnabled = false;      // energy effect along the edge  
     public bool bilateralFilterEnabled = true;      // apply bilateral filter on depth map
     public int bilateralIteration = 1;              // number of bilateral iteration
     public bool acculumationBufferEnabled = false;	// temporal coherence
+    public bool meanFilterEnabled = false;
 
     public ShaderEffect shaderEffect = ShaderEffect.SolidColor;
 
     public Material ssaoMat;                        // screen space ambient occlusion
     public Material bilateralAlphaMat;              // bilateral filter (grayscale on alpha channel)
+    public Material bilateralRGBMat;
     public Material compositeImageMat;              // final compositing
     public Material normalEstimationMat;            // normal estimation
     public Material specularNormalMat;              // specular shading my manipulating surface normal
@@ -28,7 +29,7 @@ public class NIUserTextureGenerator : MonoBehaviour
     public Material meanMat;                     // smoothing 
     public Material rgbEffectMat;
     public Material enhanceDepthMat;
-    public Material intensityMat;
+    public Material densityMat;
     public Material quickShiftMat;
 
     Material gaussianMat;   // Gaussian blur material
@@ -42,7 +43,7 @@ public class NIUserTextureGenerator : MonoBehaviour
     RenderTexture specularNormalTex;    // buffer of specular effect
     RenderTexture accBufferTex;         // temporal coherence
     RenderTexture rgbBufferTex;         // RGB texture
-    RenderTexture intensityBuffer;
+    RenderTexture densityBuffer;
 
     // Energy Effect --------------------
     //public RenderTexture humanTex;
@@ -94,7 +95,7 @@ public class NIUserTextureGenerator : MonoBehaviour
     // This function is only called once after being initialized
 	void Start() 
     {
-        DebugConsole.IsOpen = true;
+        //DebugConsole.IsOpen = true;
 
         if(!NIUtils.CheckOpenNIAvailable())
         {
@@ -170,7 +171,7 @@ public class NIUserTextureGenerator : MonoBehaviour
         accBufferTex =      InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
         specularNormalTex = InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
         rgbBufferTex =      InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
-        intensityBuffer =   InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
+        densityBuffer =     InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Point);
         renderTex01 =       InitiateRenderTexture(xResPOT, yResPOT, FilterMode.Bilinear);   // use bilinear filter
     }
 
@@ -311,17 +312,25 @@ public class NIUserTextureGenerator : MonoBehaviour
             
             Graphics.Blit(tex, tex, rgbEffectMat);*/
 
-            //for (int a = 0; a < 5; a++)
+            //for (int a = 0; a < 10; a++)
             //{
-                Graphics.Blit(rgbBufferTex, intensityBuffer, intensityMat);
-                quickShiftMat.SetTexture("_IntensityTex", intensityBuffer);
-                Graphics.Blit(rgbBufferTex, intensityBuffer, quickShiftMat);
+
+            //Graphics.Blit(rgbBufferTex, densityBuffer, densityMat);
+            //quickShiftMat.SetTexture("_DensityTex", densityBuffer);
+            //Graphics.Blit(rgbBufferTex, rgbBufferTex, quickShiftMat);
+            
             //}
 
-            Graphics.Blit(intensityBuffer, tex);
+            if (bilateralFilterEnabled)
+            {
+                for (int a = 0; a < bilateralIteration; a++)
+                    Graphics.Blit(rgbBufferTex, rgbBufferTex, bilateralRGBMat);
+            }
+
+            Graphics.Blit(rgbBufferTex, tex);
         }
 
-        //Graphics.Blit(tex, tex, mean3x3Mat);
+        if (meanFilterEnabled) Graphics.Blit(tex, tex, meanMat);
     }
 
 	void CopyTextures()

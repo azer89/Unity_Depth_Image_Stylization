@@ -63,6 +63,7 @@
      <None Include="Assets\Shader\MorphologicalErosion.shader" />
      <None Include="Assets\Shader\MedianBinaryFilter5x5.shader" />
      <None Include="Assets\Shader\FruitEffectShader\FruitDest.shader" />
+     <None Include="Assets\Shader\ColorDensity7x7.shader" />
      <None Include="Assets\Shader\AlphaCut.shader" />
      <None Include="Assets\Shader\MeanFilter5x5.shader" />
      <None Include="Assets\Shader\Bilinear.shader" />
@@ -91,8 +92,8 @@
      <None Include="Assets\Shader\ShockFilter.shader" />
      <None Include="Assets\Shader\NoEffect.shader" />
      <None Include="Assets\Shader\SSAO.shader" />
-     <None Include="Assets\Shader\ColorIntensity7x7.shader" />
      <None Include="Assets\Shader\FruitEffectShader\FruitEffect.shader" />
+     <None Include="Assets\Shader\BilateralRGB5x5.shader" />
      <None Include="Assets\Shader\MorphologicalDilation.shader" />
      <None Include="Assets\Shader\AntiAliasing.shader" />
  <Reference Include="Assembly-UnityScript">
